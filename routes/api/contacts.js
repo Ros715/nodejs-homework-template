@@ -1,5 +1,4 @@
 const express = require('express')
-// const createError = require('http-errors')
 const { NotFound, BadRequest } = require('http-errors')
 const Joi = require('joi')
 const contactsOperations = require('../../model/index')
@@ -8,6 +7,12 @@ const joiSchema = Joi.object({
   name: Joi.string().required(),
   email: Joi.string().required(),
   phone: Joi.string().required(),
+})
+
+const joiSchemaForUpdate = Joi.object({
+  name: Joi.string(),
+  email: Joi.string(),
+  phone: Joi.string(),
 })
 
 const router = express.Router()
@@ -27,10 +32,6 @@ router.get('/:contactId', async (req, res, next) => {
     const result = await contactsOperations.getById(contactId)
     if (!result) {
       throw new NotFound(`Contact with id=${contactId} not found`)
-      // throw new createError(404, `Contact with id=${contactId} not found`);
-      // const error = new Error(`Contact with id=${contactId} not found`);
-      // error.status = 404;
-      // throw error;
     }
     res.json(result)
   } catch (error) {
@@ -40,7 +41,6 @@ router.get('/:contactId', async (req, res, next) => {
 
 router.post('/', async (req, res, next) => {
   try {
-    // console.log(req.body);
     const { error } = joiSchema.validate(req.body)
     if (error) {
       throw new BadRequest(error.message)
@@ -67,7 +67,6 @@ router.delete('/:contactId', async (req, res, next) => {
       status: 'success',
       code: 200,
       message: 'contact deleted',
-      // data: { result },
     })
   } catch (error) {
     next(error)
@@ -76,7 +75,7 @@ router.delete('/:contactId', async (req, res, next) => {
 
 router.put('/:contactId', async (req, res, next) => {
   try {
-    const { error } = joiSchema.validate(req.body)
+    const { error } = joiSchemaForUpdate.validate(req.body)
     if (error) {
       throw new BadRequest(error.message)
     }
