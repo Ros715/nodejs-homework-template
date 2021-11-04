@@ -15,6 +15,18 @@ const joiSchemaForUpdate = Joi.object({
   phone: Joi.string(),
 })
 
+const validation = (schema) => {
+  const validationMiddleware = (req, res, next) => {
+    const { error } = schema.validate(req.body)
+    if (error) {
+      const newError = new BadRequest(error.message)
+      next(newError)
+    }
+    next()
+  }
+  return validationMiddleware
+}
+
 const router = express.Router()
 
 router.get('/', async (req, res, next) => {
@@ -39,12 +51,8 @@ router.get('/:contactId', async (req, res, next) => {
   }
 })
 
-router.post('/', async (req, res, next) => {
+router.post('/', validation(joiSchema), async (req, res, next) => {
   try {
-    const { error } = joiSchema.validate(req.body)
-    if (error) {
-      throw new BadRequest(error.message)
-    }
     const result = await contactsOperations.addContact(req.body)
     res.status(201).json({
       status: 'success',
@@ -73,25 +81,28 @@ router.delete('/:contactId', async (req, res, next) => {
   }
 })
 
-router.put('/:contactId', async (req, res, next) => {
-  try {
-    const { error } = joiSchemaForUpdate.validate(req.body)
-    if (error) {
-      throw new BadRequest(error.message)
+router.put(
+  '/:contactId',
+  validation(joiSchemaForUpdate),
+  async (req, res, next) => {
+    try {
+      const { contactId } = req.params
+      const result = await contactsOperations.updateContact(
+        contactId,
+        req.body
+      )
+      if (!result) {
+        throw new NotFound(`Contact with id=${contactId} not found`)
+      }
+      res.status(200).json({
+        status: 'success',
+        code: 200,
+        data: { result },
+      })
+    } catch (error) {
+      next(error)
     }
-    const { contactId } = req.params
-    const result = await contactsOperations.updateContact(contactId, req.body)
-    if (!result) {
-      throw new NotFound(`Contact with id=${contactId} not found`)
-    }
-    res.status(200).json({
-      status: 'success',
-      code: 200,
-      data: { result },
-    })
-  } catch (error) {
-    next(error)
   }
-})
+)
 
 module.exports = router
