@@ -1,51 +1,70 @@
-const fs = require('fs/promises')
-const path = require('path')
-const { v4 } = require('uuid')
+const { NotFound } = require('http-errors')
+const { Contact } = require('./contact.js')
 
-const contactsPath = path.join(__dirname, 'contacts.json')
-
-const listContacts = async () => {
-  const data = await fs.readFile(contactsPath, 'utf-8')
-  return JSON.parse(data)
+async function listContacts(req, res, next) {
+  const result = await Contact.find({})
+  res.json(result)
 }
 
-const getById = async (contactId) => {
-  const contacts = await listContacts()
-  const result = contacts.find(
-    (item) => item.id.toString() === contactId.toString()
-  )
-  if (!result) return null
-  return result
+async function getById(req, res, next) {
+  const { contactId } = req.params
+  const result = await Contact.findById(contactId)
+  if (!result) {
+    throw new NotFound(`Contact with id=${contactId} not found`)
+  }
+  res.json(result)
 }
 
-const removeContact = async (contactId) => {
-  const contacts = await listContacts()
-  const idx = contacts.findIndex(
-    (item) => item.id.toString() === contactId.toString()
-  )
-  if (idx < 0) return null
-  const removedContact = contacts.splice(idx, 1)
-  await fs.writeFile(contactsPath, JSON.stringify(contacts))
-  return removedContact
+async function addContact(req, res, next) {
+  const result = await Contact.create(req.body)
+  res.status(201).json({
+    status: 'success',
+    code: 201,
+    data: { result },
+  })
 }
 
-const addContact = async (body) => {
-  const contacts = await listContacts()
-  const newContact = { ...body, id: v4() }
-  contacts.push(newContact)
-  await fs.writeFile(contactsPath, JSON.stringify(contacts))
-  return newContact
+async function removeContact(req, res, next) {
+  const { contactId } = req.params
+  const result = await Contact.findByIdAndRemove(contactId)
+  if (!result) {
+    throw new NotFound(`Contact with id=${contactId} not found`)
+  }
+  res.status(200).json({
+    status: 'success',
+    code: 200,
+    message: 'contact deleted',
+  })
 }
 
-const updateContact = async (contactId, body) => {
-  const contacts = await listContacts()
-  const idx = contacts.findIndex(
-    (item) => item.id.toString() === contactId.toString()
-  )
-  if (idx < 0) return null
-  contacts[idx] = { ...contacts[idx], ...body }
-  await fs.writeFile(contactsPath, JSON.stringify(contacts))
-  return contacts[idx]
+async function updateContact(req, res, next) {
+  const { contactId } = req.params
+  const result = await Contact.findByIdAndUpdate(contactId, req.body, {
+    new: true,
+  })
+  if (!result) {
+    throw new NotFound(`Contact with id=${contactId} not found`)
+  }
+  res.status(200).json({
+    status: 'success',
+    code: 200,
+    data: { result },
+  })
+}
+
+async function updateStatusContact(req, res, next) {
+  const { contactId } = req.params
+  const result = await Contact.findByIdAndUpdate(contactId, req.body, {
+    new: true,
+  })
+  if (!result) {
+    throw new NotFound(`Contact with id=${contactId} not found`)
+  }
+  res.status(200).json({
+    status: 'success',
+    code: 200,
+    data: { result },
+  })
 }
 
 module.exports = {
@@ -54,4 +73,5 @@ module.exports = {
   removeContact,
   addContact,
   updateContact,
+  updateStatusContact,
 }
