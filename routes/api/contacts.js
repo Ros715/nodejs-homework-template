@@ -1,52 +1,43 @@
-const express = require('express')
-const { BadRequest } = require('http-errors')
+const express = require("express");
 const {
   joiSchemaForAdd,
   joiSchemaForUpdate,
   joiSchemaForFavorite,
-} = require('../../model/contact')
-const ctrl = require('../../model')
+} = require("../../model/contact");
+const ctrl = require("../../controllers/contacts-ctrl");
+const {
+  validation,
+  wrapper,
+  authenticate,
+} = require("../../middlewares/middlewares");
 
-const validation = (schema) => (req, res, next) => {
-  const { error } = schema.validate(req.body)
-  if (error) {
-    const newError = new BadRequest(error.message)
-    next(newError)
-  }
-  next()
-}
+const router = express.Router();
 
-const router = express.Router()
+router.get("/", authenticate, wrapper(ctrl.listContacts));
 
-const wrapper = (ctrl) => {
-  const controller = async (req, res, next) => {
-    try {
-      await ctrl(req, res, next)
-    } catch (error) {
-      next(error)
-    }
-  }
-  return controller
-}
+router.get("/:contactId", authenticate, wrapper(ctrl.getById));
 
-router.get('/', wrapper(ctrl.listContacts))
+router.post(
+  "/",
+  authenticate,
+  validation(joiSchemaForAdd),
+  wrapper(ctrl.addContact)
+);
 
-router.get('/:contactId', wrapper(ctrl.getById))
-
-router.post('/', validation(joiSchemaForAdd), wrapper(ctrl.addContact))
-
-router.delete('/:contactId', wrapper(ctrl.removeContact))
+router.delete("/:contactId", authenticate, wrapper(ctrl.removeContact));
 
 router.put(
-  '/:contactId',
+  "/:contactId",
+  authenticate,
   validation(joiSchemaForUpdate),
   wrapper(ctrl.updateContact)
-)
+);
 
 router.patch(
-  '/:contactId/favorite',
+  "/:contactId/favorite",
+  authenticate,
   validation(joiSchemaForFavorite),
   wrapper(ctrl.updateStatusContact)
-)
+);
 
-module.exports = router
+module.exports = router;
