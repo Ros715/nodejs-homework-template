@@ -1,4 +1,4 @@
-const { NotFound } = require('http-errors')
+const { NotFound, BadRequest } = require('http-errors')
 const { Contact } = require('../model/contact.js')
 
 async function listContacts(req, res, next) {
@@ -8,6 +8,9 @@ async function listContacts(req, res, next) {
   const selector = '_id name email phone owner favorite'
   const { page, limit, favorite } = req.query
   if (page && limit) {
+    if (isNaN(page) || isNaN(limit) || +page < 1 || +limit < 1) {
+      throw new BadRequest('Error pagination parameters')
+    }
     pagination.skip = (page - 1) * limit
     pagination.limit = +limit
   }
