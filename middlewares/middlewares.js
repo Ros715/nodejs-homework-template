@@ -1,4 +1,4 @@
-const { BadRequest, Unauthorized, NotFound } = require('http-errors')
+const { BadRequest, Unauthorized } = require('http-errors')
 const jwt = require('jsonwebtoken')
 const { User } = require('../model/user')
 
@@ -26,15 +26,18 @@ const wrapper = (ctrl) => {
 
 const authenticate = async (req, res, next) => {
   try {
+    if (!req.headers.authorization) {
+      throw new Unauthorized()
+    }
     const [bearer, token] = req.headers.authorization.split(' ')
-    if (bearer !== 'Bearer') {
+    if (bearer !== 'Bearer' || !token) {
       throw new Unauthorized()
     }
     try {
       const { id } = jwt.verify(token, SECRET_KEY)
       const user = await User.findById(id)
       if (!user) {
-        throw new NotFound('User not found')
+        throw new Unauthorized()
       }
       if (!user.token) {
         throw new Unauthorized()
