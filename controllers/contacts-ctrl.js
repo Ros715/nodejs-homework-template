@@ -1,8 +1,26 @@
-const { NotFound } = require('http-errors')
-const { Contact } = require('./contact.js')
+const { NotFound, BadRequest } = require('http-errors')
+const { Contact } = require('../model/contact.js')
 
 async function listContacts(req, res, next) {
-  const result = await Contact.find({})
+  const { _id } = req.user
+  const pagination = {}
+  const filter = { owner: _id }
+  const selector = '_id name email phone owner favorite'
+  const { page, limit, favorite } = req.query
+  if (page && limit) {
+    if (isNaN(page) || isNaN(limit) || +page < 1 || +limit < 1) {
+      throw new BadRequest('Error pagination parameters')
+    }
+    pagination.skip = (page - 1) * limit
+    pagination.limit = +limit
+  }
+  if (favorite) {
+    filter.favorite = favorite
+  }
+  const result = await Contact.find(filter, selector, pagination).populate(
+    'owner',
+    '_id email'
+  )
   res.json(result)
 }
 
@@ -16,7 +34,8 @@ async function getById(req, res, next) {
 }
 
 async function addContact(req, res, next) {
-  const result = await Contact.create(req.body)
+  const newContact = { ...req.body, owner: req.user._id }
+  const result = await Contact.create(newContact)
   res.status(201).json({
     status: 'success',
     code: 201,
