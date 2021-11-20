@@ -1,50 +1,41 @@
 const express = require('express')
-const { BadRequest } = require('http-errors')
 const {
   joiSchemaForAdd,
   joiSchemaForUpdate,
   joiSchemaForFavorite,
 } = require('../../model/contact')
-const ctrl = require('../../model')
-
-const validation = (schema) => (req, res, next) => {
-  const { error } = schema.validate(req.body)
-  if (error) {
-    const newError = new BadRequest(error.message)
-    next(newError)
-  }
-  next()
-}
+const ctrl = require('../../controllers/contacts-ctrl')
+const {
+  validation,
+  wrapper,
+  authenticate,
+} = require('../../middlewares/middlewares')
 
 const router = express.Router()
 
-const wrapper = (ctrl) => {
-  const controller = async (req, res, next) => {
-    try {
-      await ctrl(req, res, next)
-    } catch (error) {
-      next(error)
-    }
-  }
-  return controller
-}
+router.get('/', authenticate, wrapper(ctrl.listContacts))
 
-router.get('/', wrapper(ctrl.listContacts))
+router.get('/:contactId', authenticate, wrapper(ctrl.getById))
 
-router.get('/:contactId', wrapper(ctrl.getById))
+router.post(
+  '/',
+  authenticate,
+  validation(joiSchemaForAdd),
+  wrapper(ctrl.addContact)
+)
 
-router.post('/', validation(joiSchemaForAdd), wrapper(ctrl.addContact))
-
-router.delete('/:contactId', wrapper(ctrl.removeContact))
+router.delete('/:contactId', authenticate, wrapper(ctrl.removeContact))
 
 router.put(
   '/:contactId',
+  authenticate,
   validation(joiSchemaForUpdate),
   wrapper(ctrl.updateContact)
 )
 
 router.patch(
   '/:contactId/favorite',
+  authenticate,
   validation(joiSchemaForFavorite),
   wrapper(ctrl.updateStatusContact)
 )
