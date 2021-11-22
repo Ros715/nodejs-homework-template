@@ -77,7 +77,7 @@ const setAvatar = async (req, res, next) => {
       img.resize(250, 250).quality(60).write(resultUpload)
     })
 
-    const newAvatarURL = `http://${req.headers.host}/avatars/${newName}`
+    const newAvatarURL = `/avatars/${newName}`
     await User.findByIdAndUpdate(_id, { avatarURL: newAvatarURL })
 
     res.status(200).json({
