@@ -8,7 +8,11 @@ const uploadConfig = multer.diskStorage({
     cb(null, tmpDir)
   },
   filename: (req, file, cb) => {
-    cb(null, file.originalname)
+    if (file.mimetype.split('/')[0] !== 'image') {
+      cb(new Error(`Unexpected MIME type ${file.mimetype}`))
+    } else {
+      cb(null, file.originalname)
+    }
   },
   limits: {
     fileSize: 6000, // kB

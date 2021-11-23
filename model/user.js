@@ -33,7 +33,7 @@ const userSchema = new Schema(
 )
 
 userSchema.methods.setAvatarURL = function (email) {
-  this.avatarURL = gravatar.url(email)
+  this.avatarURL = gravatar.url(email, { protocol: 'http' })
 }
 
 userSchema.methods.setPassword = function (password) {
