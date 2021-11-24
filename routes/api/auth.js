@@ -5,6 +5,7 @@ const {
   wrapper,
   authenticate,
 } = require('../../middlewares/middlewares')
+const uploadMiddleware = require('../../middlewares/uploadMiddleware')
 const { joiSchema } = require('../../model/user')
 
 const router = express.Router()
@@ -16,5 +17,12 @@ router.post('/login', validation(joiSchema), wrapper(ctrl.login))
 router.post('/logout', authenticate, wrapper(ctrl.logout))
 
 router.get('/current', authenticate, wrapper(ctrl.current))
+
+router.patch(
+  '/avatars',
+  authenticate,
+  uploadMiddleware.single('avatar'),
+  wrapper(ctrl.setAvatar)
+)
 
 module.exports = router

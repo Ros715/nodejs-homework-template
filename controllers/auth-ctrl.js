@@ -1,5 +1,9 @@
 const { Conflict, Unauthorized } = require('http-errors')
 const jwt = require('jsonwebtoken')
+const fs = require('fs/promises')
+const path = require('path')
+const pathParse = require('path-parse')
+const Jimp = require('jimp')
 const { User } = require('../model/user.js')
 
 const { SECRET_KEY } = process.env
@@ -12,11 +16,13 @@ const signup = async (req, res, next) => {
   }
   const newUser = new User({ email })
   newUser.setPassword(password)
+  newUser.setAvatarURL(email)
   await newUser.save()
   res.status(201).json({
     user: {
       email: newUser.email,
       subscription: newUser.subscription,
+      avatarURL: newUser.avatarURL,
     },
   })
 }
@@ -38,6 +44,7 @@ const login = async (req, res, next) => {
     user: {
       email: user.email,
       subscription: user.subscription,
+      avatarURL: user.avatarURL,
     },
   })
 }
@@ -54,9 +61,35 @@ const current = async (req, res, next) => {
   res.status(200).json(user)
 }
 
+const setAvatar = async (req, res, next) => {
+  const { path: tempUpload, originalname } = req.file
+  try {
+    const { _id } = req.user
+    const parsedName = pathParse(originalname)
+    const newName = `${_id.toString()}${parsedName.ext}`
+    const destinationDir = path.join(__dirname, '../public/avatars')
+    const resultUpload = path.join(destinationDir, newName)
+
+    Jimp.read(tempUpload, (err, img) => {
+      if (err) throw err
+      img.resize(250, 250).quality(60).write(resultUpload)
+    })
+
+    const newAvatarURL = `/avatars/${newName}`
+    await User.findByIdAndUpdate(_id, { avatarURL: newAvatarURL })
+
+    res.status(200).json({
+      avatarURL: newAvatarURL,
+    })
+  } finally {
+    await fs.unlink(tempUpload)
+  }
+}
+
 module.exports = {
   signup,
   login,
   logout,
   current,
+  setAvatar,
 }
