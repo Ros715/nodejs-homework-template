@@ -6,7 +6,7 @@ const {
   authenticate,
 } = require('../../middlewares/middlewares')
 const uploadMiddleware = require('../../middlewares/uploadMiddleware')
-const { joiSchema } = require('../../model/user')
+const { joiSchema, joiSchemaForResend } = require('../../model/user')
 
 const router = express.Router()
 
@@ -26,5 +26,11 @@ router.patch(
 )
 
 router.get('/verify/:verificationToken', wrapper(ctrl.verify))
+
+router.post(
+  '/verify',
+  validation(joiSchemaForResend),
+  wrapper(ctrl.resendVerificationEmail)
+)
 
 module.exports = router

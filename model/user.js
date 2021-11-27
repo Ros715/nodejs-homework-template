@@ -59,7 +59,12 @@ const joiSchema = Joi.object({
   email: Joi.string().pattern(emailRegExp).required(),
 })
 
+const joiSchemaForResend = Joi.object({
+  email: Joi.string().pattern(emailRegExp).required(),
+})
+
 module.exports = {
   User,
   joiSchema,
+  joiSchemaForResend,
 }
