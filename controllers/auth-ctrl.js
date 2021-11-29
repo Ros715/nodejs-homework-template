@@ -1,12 +1,22 @@
-const { Conflict, Unauthorized } = require('http-errors')
+const { Conflict, Unauthorized, NotFound, BadRequest } = require('http-errors')
 const jwt = require('jsonwebtoken')
 const fs = require('fs/promises')
 const path = require('path')
 const pathParse = require('path-parse')
 const Jimp = require('jimp')
+const { nanoid } = require('nanoid')
 const { User } = require('../model/user.js')
+const sendMail = require('../util/sendMail')
 
 const { SECRET_KEY } = process.env
+
+const mailDef = (user) => {
+  return {
+    to: user.email,
+    subject: 'Registration confirmation',
+    html: `<a href="http://localhost:3000/users/verify/${user.verificationToken}">I confirm registration</a>`,
+  }
+}
 
 const signup = async (req, res, next) => {
   const { email, password } = req.body
@@ -14,10 +24,15 @@ const signup = async (req, res, next) => {
   if (user) {
     throw new Conflict('Email in use')
   }
-  const newUser = new User({ email })
+  const verificationToken = nanoid()
+  const newUser = new User({ email, verificationToken })
   newUser.setPassword(password)
   newUser.setAvatarURL(email)
+
   await newUser.save()
+
+  await sendMail(mailDef(newUser))
+
   res.status(201).json({
     user: {
       email: newUser.email,
@@ -32,6 +47,9 @@ const login = async (req, res, next) => {
   const user = await User.findOne({ email })
   if (!user || !user.comparePassword(password)) {
     throw new Unauthorized('Email or password is wrong')
+  }
+  if (!user.verify) {
+    throw new Unauthorized('Email has not been verified')
   }
   const payload = {
     id: user._id,
@@ -86,10 +104,43 @@ const setAvatar = async (req, res, next) => {
   }
 }
 
+const verify = async (req, res, next) => {
+  const { verificationToken } = req.params
+  const user = await User.findOne({ verificationToken })
+  if (!user) {
+    throw new NotFound('User not found')
+  }
+  await User.findByIdAndUpdate(user._id, {
+    verificationToken: null,
+    verify: true,
+  })
+  res.json({
+    message: 'Verification successful',
+  })
+}
+
+const resendVerificationEmail = async (req, res, next) => {
+  const user = await User.findOne({ email: req.body.email })
+  if (!user) {
+    throw new NotFound('User not found')
+  }
+  if (user.verify) {
+    throw new BadRequest('Verification has already been passed')
+  }
+
+  await sendMail(mailDef(user))
+
+  res.status(200).json({
+    message: 'Verification email sent',
+  })
+}
+
 module.exports = {
   signup,
   login,
   logout,
   current,
   setAvatar,
+  verify,
+  resendVerificationEmail,
 }
